@@ -28,7 +28,7 @@ ChainConfig.networks.Karma = {
 ChainConfig.setPrefix('KRMT')
 
 let operationParams = {
-    fee: {amount: 508, asset_id: '1.3.0'},
+    fee: {amount: 0, asset_id: '1.3.0'},
     from: '1.2.160',
     to: '1.2.148',
     amount: {amount: Math.floor(parseFloat(50000000)), asset_id: '1.3.0'}, //sum*10**precision
@@ -40,7 +40,7 @@ memo = {
     from: "KRMT7nKczna7E67Q5JntfeaKfhK3mTnZai6euTzj5tsfebW2W6iEmE" ,
     to: "KRMT6y4SbupANg4iPAQ9YNh7pSkTYTPcZ8e8tuDszZezCFDXiP25ie",
     nonce: nonce,
-    message: toHex('testmsg'),
+    message: toHex('bmqs15Gf9bC2Wq3Gx8TEAD9t7z7zVhXnum7'),
 };
 
 operationParams = { ...operationParams, memo }
