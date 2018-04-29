@@ -1,0 +1,23 @@
+{
+  "name": "karma",
+  "version": "1.0.0",
+  "description": "karma.red api js wrapper ",
+  "main": "api.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MultiMask/karma.git"
+  },
+  "keywords": [
+    "graphene",
+    "bitshares"
+  ],
+  "author": "Ivan Kocheshev",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/MultiMask/karma/issues"
+  },
+  "homepage": "https://github.com/MultiMask/karma#readme"
+}
