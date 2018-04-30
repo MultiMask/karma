@@ -1,26 +1,46 @@
 var {PrivateKey} = require('karmajs')
 var {ChainConfig} = require('karmajs-ws')
-
+var request = require('request');
 
 class Wallet {
+
+  init(){
+      // temp - only for testing algos
+      ChainConfig.networks.Karma = {
+          core_asset:  'KRMT',
+          address_prefix:  'KRMT',
+          chain_id: 'e81bea67cebfe8612010fc7c26702bce10dc53f05c57ee6d5b720bbe62e51bef',
+      }
+  
+      ChainConfig.setPrefix('KRMT')
+  }
+
+  generateKeys(login, password) {
+
+    let seed = `${login}active${password}`
+    let prv = PrivateKey.fromSeed(seed)
+    let privKey = prv.toWif()
+    let pubKey = prv.toPublicKey()
+        .toString()
+
+    let seedOwner = `${login}owner${password}`
+    let pubKeyOwner = PrivateKey.fromSeed(seedOwner)
+        .toPublicKey()
+        .toString()
+
+    return {privKey, pubKey, pubKeyOwner}
+  }
+
   create(login,pass) {
     console.log('cteate');
-    // temp - only for testing algos
-    ChainConfig.networks.Karma = {
-        core_asset:  'KRMT',
-        address_prefix:  'KRMT',
-        chain_id: 'e81bea67cebfe8612010fc7c26702bce10dc53f05c57ee6d5b720bbe62e51bef',
-    }
 
-    ChainConfig.setPrefix('KRMT')
-
-    const {pubKey, privKey, pubKeyOwner} = generateKeys(login,pass);
+    let {pubKey, privKey, pubKeyOwner} = this.generateKeys(login,pass);
 
     request.post(
         'https://testnet-faucet.karma.red/api/v1/accounts',
         { json: {
             account: {
-                name: nam,
+                name: login,
                 owner_key: pubKeyOwner,
                 active_key: pubKey,
                 memo_key: pubKey,
@@ -35,9 +55,11 @@ class Wallet {
         }
     )
 
-    this.pk = privKey;
-    this.address = login;
-    this.pass = pass;
+    this.privKey     = privKey;
+    this.address     = login;
+    this.pass        = pass;
+    this.pubKey      = pubKey;
+    this.pubKeyOwner = pubKeyOwner;
     /* chrome storage integration
     storage.set(KEY_PK, this.pk);
     storage.set(KEY_ADDRESS, this.address);
@@ -45,55 +67,7 @@ class Wallet {
     */
   }
 
-  // Generate keys
-  static generateKeys(login, password) {
-    const seed = `${login}active${password}`
-    const prv = PrivateKey.fromSeed(seed)
-    const privKey = prv.toWif()
-    const pubKey = prv.toPublicKey()
-        .toString()
 
-    const seedOwner = `${login}owner${password}`
-    const pubKeyOwner = PrivateKey.fromSeed(seedOwner)
-        .toPublicKey()
-        .toString()
-
-    return {privKey, pubKey, pubKeyOwner}
-    }
-  test() {
-    // console.log('test');
-    // const testnet = bitcoin.networks.testnet;
-    // const keyPair = bitcoin.ECPair.makeRandom({ network: testnet });
-
-    // const pass = '12345567ONE';
-
-    // this.pk = keyPair.toWIF();
-    // this.address = keyPair.getAddress();
-    // this.pass = pass;
-
-    // // console.log(testnet);
-    // // console.log(keyPair);
-    // console.log('private: ',this.pk);
-    // // console.log(this.address);
-
-    // let decoded = wif.decode(this.pk);
-
-    // var encryptedKey = bip38.encrypt(
-    //   decoded.privateKey,
-    //   decoded.compressed,
-    //   pass
-    // );
-
-    // console.log('encrypt', encryptedKey);
-
-    // var decryptedKey = bip38.decrypt(encryptedKey, pass, function(status) {
-    //   //   console.log(status.percent); // will print the precent every time current increases by 1000
-    // });
-
-    // console.log('decrypt',
-    //   wif.encode(0x80, decryptedKey.privateKey, decryptedKey.compressed)
-    // );
-  }
 
   auth(pass) {
     if (this.isAuth) {
@@ -112,25 +86,6 @@ class Wallet {
     return this.pass == pass;
   }
 
-  getInfo() {
-    const url = 'https://testnet.blockchain.info/rawaddr/';
-
-    return axios.get(`${url}${this.address}`).then(res => {
-      const lastOUT = res.data.txs[0];
-      const outputIndex = lastOUT.out.findIndex(item => item.addr === this.address);
-
-      console.log(outputIndex);
-      console.log(res.data);
-
-      return {
-        index: outputIndex,
-        address: res.data.address,
-        output: lastOUT.hash,
-        balance: res.data.final_balance,
-        txs: res.data.txs
-      }
-    });
-  }
 
   createTX({ to, amount, data }) {
     this.getInfo().then(({ output, balance, index }) => {
@@ -164,7 +119,38 @@ class Wallet {
       })
     })
   }
+  toHex(str) {
+    var hex = '';
+    for(var i=0;i<str.length;i++) {
+        hex += ''+str.charCodeAt(i).toString(16);
+    }
+    return hex;
+  }
+
+  getInfo() {
+    const url = 'https://testnet.blockchain.info/rawaddr/';
+
+    return axios.get(`${url}${this.address}`).then(res => {
+      const lastOUT = res.data.txs[0];
+      const outputIndex = lastOUT.out.findIndex(item => item.addr === this.address);
+
+      console.log(outputIndex);
+      console.log(res.data);
+
+      return {
+        index: outputIndex,
+        address: res.data.address,
+        output: lastOUT.hash,
+        balance: res.data.final_balance,
+        txs: res.data.txs
+      }
+    });
+  }
+
+
 }
 
 const wallet = new Wallet();
-export default wallet;
+wallet.init();
+wallet.create('devmanapi10', 'password')
+//export default wallet;
