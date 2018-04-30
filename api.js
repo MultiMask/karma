@@ -1,5 +1,7 @@
-var {PrivateKey} = require('karmajs')
-var {ChainConfig} = require('karmajs-ws')
+var {PrivateKey, TransactionHelper, TransactionBuilder } = require('karmajs')
+//var {Aes, PrivateKey, TransactionBuilder, TransactionHelper} = require('karmajs') 
+
+var {Apis, ChainConfig} = require("karmajs-ws");
 var request = require('request');
 
 class Wallet {
@@ -13,6 +15,8 @@ class Wallet {
       }
   
       ChainConfig.setPrefix('KRMT')
+
+      this.karma_url = "wss://testnet-node.karma.red"
   }
 
   generateKeys(login, password) {
@@ -50,7 +54,8 @@ class Wallet {
         } },
         function (error, response, body) {
             if (!error && response.statusCode == 200) {
-                console.log(body) //
+              this.id          = body.account.id 
+              console.log(body) //
             }
         }
     )
@@ -60,6 +65,7 @@ class Wallet {
     this.pass        = pass;
     this.pubKey      = pubKey;
     this.pubKeyOwner = pubKeyOwner;
+    
     /* chrome storage integration
     storage.set(KEY_PK, this.pk);
     storage.set(KEY_ADDRESS, this.address);
@@ -86,10 +92,29 @@ class Wallet {
     return this.pass == pass;
   }
 
+  getInfo(username) {
 
-  createTX({ to, amount, data }) {
-    this.getInfo().then(({ output, balance, index }) => {
+    const karma_url = "wss://testnet-node.karma.red"
+    //'devman10'
+    const ret = {
+      id : "1.2.148",
+      memo_key : "KRMT6y4SbupANg4iPAQ9YNh7pSkTYTPcZ8e8tuDszZezCFDXiP25ie"
+    }
+    return ret;
+    /*
+    return Apis.instance(karma_url, true).init_promise.then(res =>
+    {
+        console.log(res)
+        
+    }).then(
+      return Apis.instance().db_api().exec("get_account_by_name", [username])
+        .then(x => { console.log(x) } )
+        .catch(x => console.log(x))
+    ) */
+  }
 
+  createTX({ to, amount, asset_id, data }) {
+      let toData = this.getInfo(to)
       // SEND signed Tx
       console.log("create TX with: ");
       // console.log('private: ', this.pk);
@@ -99,26 +124,46 @@ class Wallet {
       // console.log('output: ', output);
       // console.log('balance: ', balance);
 
-      let SUM = balance;
+      let prv = PrivateKey.fromWif(this.privKey);
+      let nonce = TransactionHelper.unique_nonce_uint64();
+      let tr = new TransactionBuilder();
+      let precision = 5; // todo getPricisionById()
+      //onst pubKey = this.pubKey;
 
-      let testnet = bitcoin.networks.testnet;
-      let bitcoin_payload = Buffer.from(data, 'utf8');
-      let dataScript = bitcoin.script.nullData.output.encode(bitcoin_payload);
-      let keyPair = bitcoin.ECPair.fromWIF(this.pk, testnet);
+      let operationParams = {
+        fee: {amount: 0, asset_id: '1.3.0'},
+        from: this.id,
+        to: toData.id,
+        amount: {amount: Math.floor(parseFloat(amount*10**precision)), asset_id: asset_id}, //
+      };
 
-      let txb = new bitcoin.TransactionBuilder(testnet)
-      txb.addInput(output, index);
+      let memo = {
+          from: this.pubKey ,
+          to: toData.memo_key,
+          nonce: nonce,
+          message: this.toHex(data),
+      };
+      operationParams = { ...operationParams, memo }
 
-      txb.addOutput(dataScript, 0)
-      txb.addOutput(to, amount);
-      txb.addOutput(this.address, SUM - amount - 5000);
-      txb.sign(0, keyPair);
-
-      axios.post('https://testnet.blockchain.info/pushtx', 'tx=' + txb.build().toHex()).then((data) => {
-        console.log(data);
-      })
-    })
+      Apis.instance(this.karma_url, true).init_promise.then(res =>
+        {
+            tr.add_type_operation(
+                'transfer',
+                operationParams,
+            )
+            
+            tr.set_required_fees().then(x => {
+                tr.add_signer(this.privKey, this.pubKey);
+                console.log("serialized transaction:", tr.serialize());
+                tr.broadcast( x => {
+                    console.log("transaction done");
+                    console.log(x);
+                });
+            });
+        })
+    
   }
+
   toHex(str) {
     var hex = '';
     for(var i=0;i<str.length;i++) {
@@ -127,30 +172,14 @@ class Wallet {
     return hex;
   }
 
-  getInfo() {
-    const url = 'https://testnet.blockchain.info/rawaddr/';
 
-    return axios.get(`${url}${this.address}`).then(res => {
-      const lastOUT = res.data.txs[0];
-      const outputIndex = lastOUT.out.findIndex(item => item.addr === this.address);
-
-      console.log(outputIndex);
-      console.log(res.data);
-
-      return {
-        index: outputIndex,
-        address: res.data.address,
-        output: lastOUT.hash,
-        balance: res.data.final_balance,
-        txs: res.data.txs
-      }
-    });
-  }
 
 
 }
 
 const wallet = new Wallet();
 wallet.init();
-wallet.create('devmanapi10', 'password')
+wallet.create('devmanapi11', 'password')
+wallet.createTX( { to : 'devman10', amount : 1000, asset_id : '1.3.0', data : 'testdata' })
+//console.log(wallet.getInfo('devman10'))
 //export default wallet;
