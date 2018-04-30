@@ -31,7 +31,7 @@ let operationParams = {
     fee: {amount: 0, asset_id: '1.3.0'},
     from: '1.2.160',
     to: '1.2.148',
-    amount: {amount: Math.floor(parseFloat(50000000)), asset_id: '1.3.0'}, //sum*10**precision
+    amount: {amount: Math.floor(parseFloat(1000000000)), asset_id: '1.3.0'}, //sum*10**precision
 };
 
 let memo = null;
@@ -58,8 +58,9 @@ Apis.instance(karma_url, true).init_promise.then(res =>
         tr.set_required_fees().then(x => {
             tr.add_signer(prv, pubKey);
             console.log("serialized transaction:", tr.serialize());
-            tr.broadcast(() => {
+            tr.broadcast( x => {
                 console.log("transaction done");
+		console.log(x);
             });
         });
     })
@@ -68,6 +69,3 @@ Apis.instance(karma_url, true).init_promise.then(res =>
 
 
 
-tr.broadcast().then(e => e).catch((error) => {
-    console.log(error.message)
-});
